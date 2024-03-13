@@ -14,7 +14,7 @@ def get_config():
         "model_folder": "model", 
         "model_filename": "transformer_model_",
         "preload": None,
-        "tokenizer_path": "tokenizer_{0}.json",
+        "tokenizer_path": "model/tokenizer_{0}.json",
         "experiment_name": "runs/tmodel",
     }
     return config

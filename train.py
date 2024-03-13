@@ -11,9 +11,9 @@ from torch.utils.data import DataLoader, Dataset, random_split
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
-from config import get_config, get_weights_file_path
-from dataset import BilingualDataset, causal_mask
-from transformer_model import build_transformer
+from pytorch_transformer_from_scratch.config import get_config, get_weights_file_path
+from pytorch_transformer_from_scratch.dataset import BilingualDataset, causal_mask
+from pytorch_transformer_from_scratch.transformer_model import build_transformer
 
 
 def get_all_sentences(dataset, lang):
