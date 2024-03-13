@@ -42,9 +42,12 @@ def get_or_build_tokenizer(config, dataset, lang) -> Tokenizer:
 
 def get_dataset(config):
     # We use the OPUS Books dataset from the HuggingFace. Only train split is available.
-    dataset_raw = load_dataset(
+    big_dataset_raw = load_dataset(
         "opus_books", f"{config['src_lang']}-{config['tgt_lang']}", split="train"
     )
+
+    dataset_size = int(len(big_dataset_raw) * config["dataset_fraction_used"])
+    dataset_raw, _ = random_split(big_dataset_raw, [dataset_size, len(big_dataset_raw) - dataset_size])
 
     # Build tokenizer
     tokenizer_src = get_or_build_tokenizer(config, dataset_raw, config["src_lang"])

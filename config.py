@@ -10,7 +10,7 @@ def get_config():
         "d_model": 512,
         "src_lang": "en",
         "tgt_lang": "it",
-
+        "dataset_fraction_used": 0.1,
         "model_folder": "model", 
         "model_filename": "transformer_model_",
         "preload": None,
