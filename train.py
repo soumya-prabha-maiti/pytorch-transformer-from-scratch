@@ -47,7 +47,9 @@ def get_dataset(config):
     )
 
     dataset_size = int(len(big_dataset_raw) * config["dataset_fraction_used"])
-    dataset_raw, _ = random_split(big_dataset_raw, [dataset_size, len(big_dataset_raw) - dataset_size])
+    dataset_raw, _ = random_split(
+        big_dataset_raw, [dataset_size, len(big_dataset_raw) - dataset_size]
+    )
 
     # Build tokenizer
     tokenizer_src = get_or_build_tokenizer(config, dataset_raw, config["src_lang"])
