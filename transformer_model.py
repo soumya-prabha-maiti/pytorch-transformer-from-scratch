@@ -17,7 +17,8 @@ class InputEmbedding(nn.Module):
         self.embedding = nn.Embedding(vocab_size, d_model)
 
     def forward(self, x):
-        return self.embedding(x) * math.sqrt(self.d_model)
+        rval = self.embedding(x) * math.sqrt(self.d_model)
+        return rval
 
 
 class PositionalEncoding(nn.Module):
@@ -39,7 +40,8 @@ class PositionalEncoding(nn.Module):
 
     def forward(self, x):
         x = x + (self.pe[:, : x.shape[1], :]).requires_grad_(False)
-        return self.dropout(x)
+        rval = self.dropout(x)
+        return rval
 
 
 class LayerNormalization(nn.Module):
@@ -52,7 +54,8 @@ class LayerNormalization(nn.Module):
     def forward(self, x):
         mean = x.mean(-1, keepdim=True)
         std = x.std(-1, keepdim=True)
-        return self.alpha * (x - mean) / (std + self.eps) + self.bias
+        rval = self.alpha * (x - mean) / (std + self.eps) + self.bias
+        return rval
 
 
 class FeedForwardBlock(nn.Module):
@@ -133,8 +136,8 @@ class MultiHeadAttentionBlock(nn.Module):
 
         # Apply final linear layer
         # (batch_size, seq_len, d_model) -> (batch_size, seq_len, d_model)
-        return self.w_o(x)
-
+        rval = self.w_o(x)
+        return rval
 
 class ResidualConnection(nn.Module):
     def __init__(self, dropout: float) -> None:
@@ -144,10 +147,11 @@ class ResidualConnection(nn.Module):
 
     def forward(self, x, sublayer):
         # In the research paper "Attention is all you need", they apply norm after adding x and sublayer. That is the followig code:
-        # return self.norm(x + self.dropout(sublayer(x)))
+        # rval = self.norm(x + self.dropout(sublayer(x)))
 
         # But in many popular implementations the norm is applied before
-        return x + self.dropout(sublayer(self.norm(x)))
+        rval = x + self.dropout(sublayer(self.norm(x)))
+        return rval
 
 
 class EncoderBlock(nn.Module):
@@ -169,8 +173,8 @@ class EncoderBlock(nn.Module):
             x, lambda x: self.self_attention_block(x, x, x, src_mask)
         )
         x = self.residual_connections[1](x, self.feed_forward_block)
-        return x
-
+        rval = x
+        return rval
 
 class Encoder(nn.Module):
     def __init__(
@@ -184,7 +188,9 @@ class Encoder(nn.Module):
     def forward(self, x, src_mask):
         for encoder_block in self.encoder_blocks:
             x = encoder_block(x, src_mask)
-        return self.norm(x)
+        rval = self.norm(x)
+        return rval
+
 
 
 class DecoderBlock(nn.Module):
@@ -214,7 +220,8 @@ class DecoderBlock(nn.Module):
             ),
         )
         x = self.residual_connections[2](x, self.feed_forward_block)
-        return x
+        rval = x
+        return rval
 
 
 class Decoder(nn.Module):
@@ -228,7 +235,8 @@ class Decoder(nn.Module):
     def forward(self, x, encoder_output, src_mask, tgt_mask):
         for decoder_block in self.decoder_blocks:
             x = decoder_block(x, encoder_output, src_mask, tgt_mask)
-        return self.norm(x)
+        rval = self.norm(x)
+        return rval
 
 
 class ProjectionLayer(nn.Module):
@@ -238,7 +246,8 @@ class ProjectionLayer(nn.Module):
 
     def forward(self, x):
         # (batch_size, seq_len, d_model) -> (batch_size, seq_len, vocab_size)
-        return torch.log_softmax(self.linear(x), dim=-1)
+        rval = torch.log_softmax(self.linear(x), dim=-1)
+        return rval
 
 
 class Transformer(nn.Module):
@@ -262,15 +271,18 @@ class Transformer(nn.Module):
         self.projection = projection
 
     def encode(self, src, src_mask):
-        return self.encoder(self.src_pos(self.src_embed(src)), src_mask)
+        rval = self.encoder(self.src_pos(self.src_embed(src)), src_mask)
+        return rval
 
     def decode(self, encoder_output, src_mask, tgt, tgt_mask):
-        return self.decoder(
+        rval = self.decoder(
             self.tgt_pos(self.tgt_embed(tgt)), encoder_output, src_mask, tgt_mask
         )
+        return rval
 
     def project(self, x):
-        return self.projection(x)
+        rval = self.projection(x)
+        return rval
 
 
 def build_transformer(
