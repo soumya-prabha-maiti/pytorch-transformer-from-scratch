@@ -47,10 +47,14 @@ def get_dataset(config):
     )
 
     dataset_size = int(len(big_dataset_raw) * config["dataset_fraction_used"])
+    
     dataset_raw, _ = random_split(
         big_dataset_raw, [dataset_size, len(big_dataset_raw) - dataset_size]
     )
 
+    shape_logger.debug(f"len(big_dataset_raw): {len(big_dataset_raw)}")
+    shape_logger.debug(f"len(dataset_raw): {len(dataset_raw)}")
+    
     # Build tokenizer
     tokenizer_src = get_or_build_tokenizer(config, dataset_raw, config["src_lang"])
     tokenizer_tgt = get_or_build_tokenizer(config, dataset_raw, config["tgt_lang"])
@@ -78,6 +82,9 @@ def get_dataset(config):
         config["tgt_lang"],
         config["seq_len"],
     )
+
+    shape_logger.debug(f"len(train_ds): {len(train_ds)}")
+    shape_logger.debug(f"len(val_ds): {len(val_ds)}")
 
     max_seq_len_src = max(
         len(tokenizer_src.encode(sentence).ids)
@@ -147,6 +154,12 @@ def train_model(config):
         model.train()
         batch_iterator = tqdm(train_dataloader, desc=f"Epoch {epoch:02d}")
         for batch in batch_iterator:
+            shape_logger.debug(f"size(encoder_input): {batch['encoder_input'].size()}")
+            shape_logger.debug(f"size(decoder_input): {batch['decoder_input'].size()}")
+            shape_logger.debug(f"size(encoder_mask): {batch['encoder_mask'].size()}")
+            shape_logger.debug(f"size(decoder_mask): {batch['decoder_mask'].size()}")
+            shape_logger.debug(f"size(label): {batch['label'].size()}")
+
             encoder_input = batch["encoder_input"].to(device)  # (batch_size, seq_len)
             decoder_input = batch["decoder_input"].to(device)  # (batch_size, seq_len)
             encoder_mask = batch["encoder_mask"].to(

@@ -90,7 +90,7 @@ class BilingualDataset(Dataset):
         assert decoder_input.size(0) == self.seq_len
         assert label.size(0) == self.seq_len
 
-        return {
+        rval = {
             "encoder_input": encoder_input,  # (seq_len)
             "decoder_input": decoder_input,  # (seq_len)
             "encoder_mask": (encoder_input != self.pad_token)
@@ -107,7 +107,17 @@ class BilingualDataset(Dataset):
             "tgt_text": tgt_text,
         }
 
+        shape_logger.debug(f"size(encoder_input): {rval['encoder_input'].size()}")
+        shape_logger.debug(f"size(decoder_input): {rval['decoder_input'].size()}")
+        shape_logger.debug(f"size(encoder_mask): {rval['encoder_mask'].size()}")
+        shape_logger.debug(f"size(decoder_mask): {rval['decoder_mask'].size()}")
+        shape_logger.debug(f"size(label): {rval['label'].size()}")
+
+        return rval
+
 
 def causal_mask(size: int):
     mask = torch.triu(torch.ones(1, size, size), diagonal=1).type(torch.int)
-    return mask == 0
+    rval = (mask == 0)
+    shape_logger.debug(f"size(causal_mask): {rval.size()}")
+    return rval
