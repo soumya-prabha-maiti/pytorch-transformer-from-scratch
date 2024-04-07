@@ -92,11 +92,11 @@ def get_dataset(config):
     print(f"Max sequence length for target language: {max_seq_len_tgt}")
 
     train_dataloader = DataLoader(
-        train_ds, batch_size=config["batch_size"], shuffle=True
+        train_ds, batch_size=config["train_batch_size"], shuffle=True
     )
     val_dataloader = DataLoader(
-        val_ds, batch_size=1, shuffle=False
-    )  # TODO is batch_size=1 or from configfor validation
+        val_ds, batch_size=config["val_batch_size"], shuffle=False
+    )
 
     return train_dataloader, val_dataloader, tokenizer_src, tokenizer_tgt
 
