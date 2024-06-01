@@ -1,18 +1,21 @@
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader, Dataset, random_split
 from tokenizers import Tokenizer
+from torch import Tensor
+from torch.utils.data import DataLoader, Dataset, random_split
+
+from pytorch_transformer_from_scratch.log_utils import shape_logger
 
 
 class BilingualDataset(Dataset):
     def __init__(
         self,
-        dataset,
+        dataset: Dataset,
         tokenizer_src: Tokenizer,
         tokenizer_tgt: Tokenizer,
-        src_lang,
-        tgt_lang,
-        seq_len,
+        src_lang: str,
+        tgt_lang: str,
+        seq_len: int,
     ) -> None:
         super().__init__()
 
@@ -36,7 +39,7 @@ class BilingualDataset(Dataset):
     def __len__(self):
         return len(self.dataset)
 
-    def __getitem__(self, index):
+    def __getitem__(self, index) -> dict[str, Tensor | str]:
         src_tgt_pair = self.dataset[index]
         src_text = src_tgt_pair["translation"][self.src_lang]
         tgt_text = src_tgt_pair["translation"][self.tgt_lang]

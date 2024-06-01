@@ -1,4 +1,6 @@
 from pathlib import Path
+from typing import Any
+from pytorch_transformer_from_scratch.log_utils import shape_logger
 
 import torch
 import torch.nn as nn
@@ -13,16 +15,20 @@ from tqdm import tqdm
 
 from pytorch_transformer_from_scratch.config import get_config, get_weights_file_path
 from pytorch_transformer_from_scratch.dataset import BilingualDataset, causal_mask
-from pytorch_transformer_from_scratch.transformer_model import build_transformer
+from pytorch_transformer_from_scratch.transformer_model import (
+    build_transformer,
+    Transformer,
+)
 
 
-def get_all_sentences(dataset, lang):
+def get_all_sentences(dataset: Dataset, lang: str):
     for item in dataset:
         yield item["translation"][lang]
 
 
-def get_or_build_tokenizer(config, dataset, lang) -> Tokenizer:
-    # TODO move tokenizers into a folder
+def get_or_build_tokenizer(
+    config: dict[str, Any], dataset: Dataset, lang: str
+) -> Tokenizer:
     tokenizer_path = Path(config["tokenizer_path"].format(lang))
     if not Path.exists(tokenizer_path):
         tokenizer = Tokenizer(WordLevel(unk_token="[UNK]"))
@@ -40,7 +46,9 @@ def get_or_build_tokenizer(config, dataset, lang) -> Tokenizer:
     return tokenizer
 
 
-def get_dataset(config):
+def get_dataset(
+    config: dict[str, Any]
+) -> tuple[DataLoader, DataLoader, Tokenizer, Tokenizer]:
     # We use the OPUS Books dataset from the HuggingFace. Only train split is available.
     big_dataset_raw = load_dataset(
         "opus_books", f"{config['src_lang']}-{config['tgt_lang']}", split="train"
@@ -108,7 +116,7 @@ def get_dataset(config):
     return train_dataloader, val_dataloader, tokenizer_src, tokenizer_tgt
 
 
-def get_model(config, src_vocab_size, tgt_vocab_size):
+def get_model(config, src_vocab_size, tgt_vocab_size) -> Transformer:
     model = build_transformer(
         src_vocab_size=src_vocab_size,
         tgt_vocab_size=tgt_vocab_size,
@@ -120,7 +128,13 @@ def get_model(config, src_vocab_size, tgt_vocab_size):
     return model
 
 
-def train_model(config):
+def train_model(config: dict[str, Any]) -> None:
+    """Creates a transformer model from the configuration, trains it and saves it.
+
+    Args:
+        config (dict[str, Any]): Model configurations
+    """
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
