@@ -20,6 +20,7 @@ def get_config():
         "dataset_fraction_used": float(os.getenv("DATASET_FRACTION_USED", 1)),
         "model_folder": os.getenv("MODEL_FOLDER", "model"),
         "model_filename": os.getenv("MODEL_FILENAME", "transformer_model_"),
+        "log_folder": os.getenv("LOG_FOLDER", "logs"),
         "preload": os.getenv("PRELOAD"),
         "tokenizer_path": os.getenv("TOKENIZER_PATH", "model/tokenizer_{0}.json"),
         "experiment_name": os.getenv("EXPERIMENT_NAME", "runs/tmodel"),
@@ -33,4 +34,10 @@ def get_weights_file_path(config: dict[str, Any], epoch: str):
     model_filename = config["model_filename"]
 
     return str(Path(".") / model_folder / model_filename) + epoch + ".pt"
+
+def get_log_folder(config: dict[str, Any]):
+    log_folder = config["log_folder"]
+    # Create the log folder if it does not exist
+    Path(log_folder).mkdir(parents=True, exist_ok=True)
+    return str(Path(".") / log_folder)
 
