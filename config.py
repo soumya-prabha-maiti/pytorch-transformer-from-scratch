@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def get_config():
+def get_config() -> dict[str, Any]:
     config = {
         "train_batch_size": int(os.getenv("TRAIN_BATCH_SIZE", 8)),
         "val_batch_size": int(os.getenv("VAL_BATCH_SIZE", 1)),
@@ -29,13 +29,13 @@ def get_config():
     return config
 
 
-def get_weights_file_path(config: dict[str, Any], epoch: str):
+def get_weights_file_path(config: dict[str, Any], epoch: str) -> str:
     model_folder = config["model_folder"]
     model_filename = config["model_filename"]
 
     return str(Path(".") / model_folder / model_filename) + epoch + ".pt"
 
-def get_log_folder(config: dict[str, Any]):
+def get_log_folder(config: dict[str, Any]) -> str:
     log_folder = config["log_folder"]
     # Create the log folder if it does not exist
     Path(log_folder).mkdir(parents=True, exist_ok=True)
