@@ -1,12 +1,11 @@
 import math
 from typing import Iterable
-from pytorch_transformer_from_scratch.log_utils import shape_logger
+from pytorch_transformer_from_scratch.log_utils import shape_logger,log_metadata
 import torch
 import torch.nn as nn
 
 # TODO: Add type hints
 # TODO: Add docstrings
-# TODO: Add logs indicating shape of tensors
 
 
 class InputEmbedding(nn.Module):
@@ -16,13 +15,9 @@ class InputEmbedding(nn.Module):
         self.d_model = d_model
         self.embedding = nn.Embedding(vocab_size, d_model)
 
+    @log_metadata()
     def forward(self, x):
         rval = self.embedding(x) * math.sqrt(self.d_model)
-
-        shape_logger.debug(f"InputEmbedding size(input): {x.size()}")
-        shape_logger.debug(f"InputEmbedding size(output): {rval.size()}")
-
-
         return rval
 
 
@@ -43,13 +38,10 @@ class PositionalEncoding(nn.Module):
         pe = pe.unsqueeze(0)
         self.register_buffer("pe", pe)
 
+    @log_metadata()
     def forward(self, x):
         x = x + (self.pe[:, : x.shape[1], :]).requires_grad_(False)
         rval = self.dropout(x)
-
-        shape_logger.debug(f"PositionalEncoding size(input): {x.size()}")
-        shape_logger.debug(f"PositionalEncoding size(output): {rval.size()}")
-
         return rval
 
 
@@ -60,15 +52,15 @@ class LayerNormalization(nn.Module):
         self.alpha = nn.Parameter(torch.ones(1))  # Multiplied
         self.bias = nn.Parameter(torch.zeros(1))  # Added
 
+    @log_metadata()
     def forward(self, x):
         mean = x.mean(-1, keepdim=True)
         std = x.std(-1, keepdim=True)
         rval = self.alpha * (x - mean) / (std + self.eps) + self.bias
 
-        shape_logger.debug(f"LayerNormalization size(input): {x.size()}")
-        shape_logger.debug(f"LayerNormalization size(mean): {mean.size()}")
-        shape_logger.debug(f"LayerNormalization size(std): {std.size()}")
-        shape_logger.debug(f"LayerNormalization size(output): {rval.size()}")
+        shape_logger.debug(f"LayerNormalization :: forward :: mean.shape :: {mean.shape}")
+        shape_logger.debug(f"LayerNormalization :: forward :: std.size :: {std.shape}")
+
         return rval
 
 
@@ -83,12 +75,13 @@ class FeedForwardBlock(nn.Module):
         self.dropout = nn.Dropout(p=dropout)
         self.linear2 = nn.Linear(d_ff, d_model)  # W2 * x + b2
 
+    @log_metadata()
     def forward(self, x):
         # (batch_size, seq_len, d_model) -> (batch_size, seq_len, d_ff) -> (batch_size, seq_len, d_model)
-        rval = self.linear2(self.dropout(torch.relu(self.linear1(x))))
+        intermediate = self.dropout(torch.relu(self.linear1(x)))
+        rval = self.linear2(intermediate)
 
-        shape_logger.debug(f"FeedForwardBlock size(input): {x.size()}")
-        shape_logger.debug(f"FeedForwardBlock size(output): {rval.size()}")
+        shape_logger.debug(f"FeedForwardBlock :: forward :: intermediate.shape :: {intermediate.shape}")
 
         return rval
 
@@ -129,6 +122,7 @@ class MultiHeadAttentionBlock(nn.Module):
         # (batch_size, h, seq_len, seq_len) @ (batch_size, h, seq_len, d_k) -> (batch_size, h, seq_len, d_k) , (batch_size, h, seq_len, seq_len)
         return attention_scores @ value, attention_scores
 
+    @log_metadata()
     def forward(self, q, k, v, mask):
         # Multiply with weight matrices
         # (batch_size, seq_len, d_model) -> (batch_size, seq_len, d_model)
@@ -157,13 +151,9 @@ class MultiHeadAttentionBlock(nn.Module):
         # (batch_size, seq_len, d_model) -> (batch_size, seq_len, d_model)
         rval = self.w_o(x)
 
-        shape_logger.debug(f"MultiHeadAttentionBlock size(input.q): {q.size()}")
-        shape_logger.debug(f"MultiHeadAttentionBlock size(input.k): {k.size()}")
-        shape_logger.debug(f"MultiHeadAttentionBlock size(input.v): {v.size()}")
-        shape_logger.debug(f"MultiHeadAttentionBlock size(input.mask): {mask.size()}")
-        shape_logger.debug(f"MultiHeadAttentionBlock size(x): {x.size()}")
-        shape_logger.debug(f"MultiHeadAttentionBlock size(attention_scores): {self.attention_scores.size()}")
-        shape_logger.debug(f"MultiHeadAttentionBlock size(rval): {rval.size()}")
+        #Log more intermediate shapes
+        shape_logger.debug(f"MultiHeadAttentionBlock :: forward :: x.shape :: {x.shape}")
+        shape_logger.debug(f"MultiHeadAttentionBlock :: forward :: attention_scores.shape :: {self.attention_scores.shape}")
 
         return rval
 
@@ -173,6 +163,7 @@ class ResidualConnection(nn.Module):
         self.dropout = nn.Dropout(p=dropout)
         self.norm = LayerNormalization()
 
+    @log_metadata()
     def forward(self, x, sublayer):
         # In the research paper "Attention is all you need", they apply norm after adding x and sublayer. That is the followig code:
         # rval = self.norm(x + self.dropout(sublayer(x)))
@@ -180,9 +171,7 @@ class ResidualConnection(nn.Module):
         # But in many popular implementations the norm is applied before
         rval = x + self.dropout(sublayer(self.norm(x)))
 
-        shape_logger.debug(f"ResidualConnection size(input.x): {x.size()}")
-        shape_logger.debug(f"ResidualConnection size(sublayer(x)): {sublayer(x).size()}")
-        shape_logger.debug(f"ResidualConnection size(output): {rval.size()}")
+        shape_logger.debug(f"ResidualConnection :: forward :: sublayer(x).shape :: {sublayer(x).shape}")
 
         return rval
 
@@ -201,17 +190,13 @@ class EncoderBlock(nn.Module):
             [ResidualConnection(dropout) for _ in range(2)]
         )
 
+    @log_metadata()
     def forward(self, x, src_mask):
         x = self.residual_connections[0](
             x, lambda x: self.self_attention_block(x, x, x, src_mask)
         )
         x = self.residual_connections[1](x, self.feed_forward_block)
         rval = x
-
-        shape_logger.debug(f"EncoderBlock size(input.x): {x.size()}")
-        shape_logger.debug(f"EncoderBlock size(input.src_mask): {src_mask.size()}")
-        shape_logger.debug(f"EncoderBlock size(output): {rval.size()}")
-
         return rval
 
 class Encoder(nn.Module):
@@ -223,15 +208,11 @@ class Encoder(nn.Module):
         self.encoder_blocks = encoder_blocks
         self.norm = LayerNormalization()
 
+    @log_metadata()
     def forward(self, x, src_mask):
         for encoder_block in self.encoder_blocks:
             x = encoder_block(x, src_mask)
         rval = self.norm(x)
-
-        shape_logger.debug(f"Encoder size(input.x): {x.size()}")
-        shape_logger.debug(f"Encoder size(input.src_mask): {src_mask.size()}")
-        shape_logger.debug(f"Encoder size(output): {rval.size()}")
-
         return rval
 
 
@@ -252,6 +233,7 @@ class DecoderBlock(nn.Module):
             [ResidualConnection(dropout) for _ in range(3)]
         )
 
+    @log_metadata()
     def forward(self, x, encoder_output, src_mask, tgt_mask):
         x = self.residual_connections[0](
             x, lambda x: self.self_attention_block(x, x, x, tgt_mask)
@@ -264,13 +246,6 @@ class DecoderBlock(nn.Module):
         )
         x = self.residual_connections[2](x, self.feed_forward_block)
         rval = x
-
-        shape_logger.debug(f"DecoderBlock size(input.x): {x.size()}")
-        shape_logger.debug(f"DecoderBlock size(input.encoder_output): {encoder_output.size()}")
-        shape_logger.debug(f"DecoderBlock size(input.src_mask): {src_mask.size()}")
-        shape_logger.debug(f"DecoderBlock size(input.tgt_mask): {tgt_mask.size()}")
-        shape_logger.debug(f"DecoderBlock size(output): {rval.size()}")
-
         return rval
 
 
@@ -282,17 +257,11 @@ class Decoder(nn.Module):
         self.decoder_blocks = decoder_blocks
         self.norm = LayerNormalization()
 
+    @log_metadata()
     def forward(self, x, encoder_output, src_mask, tgt_mask):
         for decoder_block in self.decoder_blocks:
             x = decoder_block(x, encoder_output, src_mask, tgt_mask)
         rval = self.norm(x)
-
-        shape_logger.debug(f"Decoder size(input.x): {x.size()}")
-        shape_logger.debug(f"Decoder size(input.encoder_output): {encoder_output.size()}")
-        shape_logger.debug(f"Decoder size(input.src_mask): {src_mask.size()}")
-        shape_logger.debug(f"Decoder size(input.tgt_mask): {tgt_mask.size()}")
-        shape_logger.debug(f"Decoder size(output): {rval.size()}")
-
         return rval
 
 
@@ -301,13 +270,10 @@ class ProjectionLayer(nn.Module):
         super().__init__()
         self.linear = nn.Linear(d_model, vocab_size)
 
+    @log_metadata()
     def forward(self, x):
         # (batch_size, seq_len, d_model) -> (batch_size, seq_len, vocab_size)
         rval = torch.log_softmax(self.linear(x), dim=-1)
-
-        shape_logger.debug(f"ProjectionLayer size(input): {x.size()}")
-        shape_logger.debug(f"ProjectionLayer size(output): {rval.size()}")
-
         return rval
 
 
@@ -331,34 +297,21 @@ class Transformer(nn.Module):
         self.tgt_pos = tgt_pos
         self.projection = projection
 
+    @log_metadata()
     def encode(self, src, src_mask):
         rval = self.encoder(self.src_pos(self.src_embed(src)), src_mask)
-        
-        shape_logger.debug(f"Transformer.encode size(ipnut.src): {src.size()}")
-        shape_logger.debug(f"Transformer.encode size(ipnut.src_mask): {src_mask.size()}")
-        shape_logger.debug(f"Transformer.encode size(output): {rval.size()}")
-
         return rval
 
+    @log_metadata()
     def decode(self, encoder_output, src_mask, tgt, tgt_mask):
         rval = self.decoder(
             self.tgt_pos(self.tgt_embed(tgt)), encoder_output, src_mask, tgt_mask
         )
-
-        shape_logger.debug(f"Transformer.decode size(ipnut.encoder_output): {encoder_output.size()}")
-        shape_logger.debug(f"Transformer.decode size(ipnut.src_mask): {src_mask.size()}")
-        shape_logger.debug(f"Transformer.decode size(ipnut.tgt): {tgt.size()}")
-        shape_logger.debug(f"Transformer.decode size(ipnut.tgt_mask): {tgt_mask.size()}")
-        shape_logger.debug(f"Transformer.decode size(output): {rval.size()}")
-
         return rval
 
+    @log_metadata()
     def project(self, x):
         rval = self.projection(x)
-
-        shape_logger.debug(f"Transformer.project size(ipnut): {x.size()}")
-        shape_logger.debug(f"Transformer.project size(output): {rval.size()}")
-        
         return rval
 
 
